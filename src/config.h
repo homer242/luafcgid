@@ -1,10 +1,10 @@
 #ifndef CONFIG_H_INCLUDED
 #define CONFIG_H_INCLUDED
 
-#define LISTEN_PATH ":9000"
-#define LOGFILE "luafcgid.log"
+#define LISTEN_PATH "127.0.0.1:9234"
+#define LOGFILE "/tmp/luafcgid.log"
 #define HTTP_STATUS "200 OK"
-#define HTTP_CONTENTTYPE "text/html"
+#define HTTP_CONTENTTYPE "text/plain"
 #define HANDLER "main"
 #define HEADERS "X-Powered-By: Lua\r\n"
 
