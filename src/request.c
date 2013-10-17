@@ -46,10 +46,15 @@ int L_req_header(lua_State *L) {
 		s1 = luaL_checklstring(L, 2, &l1);
 		if (lua_gettop(L) == 3) {
 			s2 = luaL_checklstring(L, 3, &l2);
-			buffer_add(&r->header, s1, l1);
-			buffer_add(&r->header, ": ", -1);
-			buffer_add(&r->header, s2, l2);
-			buffer_add(&r->header, CRLF, -1);
+			if (strncmp(s1, "Content-Type", l1) == 0) {
+				snprintf(r->contenttype, sizeof(r->contenttype),
+					 "%s", s2);
+			} else {
+				buffer_add(&r->header, s1, l1);
+				buffer_add(&r->header, ": ", -1);
+				buffer_add(&r->header, s2, l2);
+				buffer_add(&r->header, CRLF, -1);
+			}
 		} else {
 			buffer_add(&r->header, s1, l1);
 			buffer_add(&r->header, CRLF, -1);

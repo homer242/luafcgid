@@ -111,6 +111,7 @@ void send_header(request_t* req) {
 		logit("out of memory!");
 		return;
 	}
+
 	sprintf(header, "Status: %s\r\n" \
 			"Content-Type: %s\r\n",
 			req->httpstatus,
