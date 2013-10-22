@@ -491,10 +491,6 @@ int main(int argc, char** argv) {
 	/* load file configuration */
 	conf = config_load(args.cfg_filename);
 
-	/* redirect stderr to logfile */
-	//if (conf->logfile)
-	//	freopen(conf->logfile, "w", stderr);
-
 	FCGX_Init();
 
 	sock = FCGX_OpenSocket(conf->listen, conf->backlog);

@@ -82,9 +82,6 @@ contenttype = <*string*>
 maxpost = <*integer*>
 :	Maximum POST size allowed.
 
-logfile = <*string*>
-:	Full or relative path to logfile.
-
 
 
 

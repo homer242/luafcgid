@@ -31,7 +31,6 @@ struct config_struct {
 	char* contenttype;
 	int maxpost;
 	int maxcount;
-	char* logfile;
 	int backlog;
 	lua_State* L; /* global Lua state */
 } typedef config_t;
