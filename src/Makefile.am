@@ -5,6 +5,7 @@ lfcgid_SOURCES = main.c main.h \
 	config.c config.h \
 	pool.c pool.h \
 	request.c request.h \
+	args.c args.h \
 	log.c log.h \
 	str.h
 

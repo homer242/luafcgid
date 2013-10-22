@@ -8,6 +8,9 @@
 #include "main.h"
 
 #include "log.h"
+#include "args.h"
+
+static struct args args;
 
 const char* CRLF = "\r\n";
 
@@ -459,7 +462,7 @@ static void *worker_run(void *a) {
 
 }
 
-int main(int arc, char** argv) {
+int main(int argc, char** argv) {
 
 	int i, sock;
 	pid_t pid = getpid();
@@ -475,15 +478,22 @@ int main(int arc, char** argv) {
 
 	log_open(basename(argv[0]), LOG_PID, LOG_DAEMON);
 
-	if (arc > 1 && argv[1]) {
-		conf = config_load(argv[1]);
-	} else {
-		conf = config_load("config.lua");
+	/* parse args */
+	if (args_parse(&args, argc, argv) != 0) {
+		return -1;
 	}
 
+	/* configure log */
+	log_setup(args.log_level,
+		  args.log_trace,
+		  args.log_use_syslog);
+
+	/* load file configuration */
+	conf = config_load(args.cfg_filename);
+
 	/* redirect stderr to logfile */
-	if (conf->logfile)
-		freopen(conf->logfile, "w", stderr);
+	//if (conf->logfile)
+	//	freopen(conf->logfile, "w", stderr);
 
 	FCGX_Init();
 
