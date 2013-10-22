@@ -1,5 +1,7 @@
 #include "main.h"
 
+#include "log.h"
+
 /* utility functions */
 
 request_t* luaL_checkrequest(lua_State* L, int i) {
@@ -146,7 +148,7 @@ int L_req_log(lua_State *L) {
     if (lua_gettop(L) >= 2) {
         r = luaL_checkrequest(L, 1);
         s = luaL_checklstring(L, 2, &l);
-        logit(s);
+        log_notice("%s", s);
     }
     return 0;
 }

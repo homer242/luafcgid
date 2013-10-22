@@ -1,5 +1,7 @@
 #include "main.h"
 
+#include "log.h"
+
 config_t* config_load(const char* fn) {
 	int rc;
 	struct stat fs;
@@ -79,16 +81,16 @@ config_t* config_load(const char* fn) {
 			}
 			switch (rc) {
 				case LUA_ERRSYNTAX:
-					logit("[%d] %s: %s", 0, LUA_ERRSYNTAX_STR, errmsg);
+					log_err("[%d] %s: %s", 0, LUA_ERRSYNTAX_STR, errmsg);
 					break;
 				case LUA_ERRRUN:
-					logit("[%d] %s", 0, LUA_ERRRUN_STR);
+					log_err("[%d] %s", 0, LUA_ERRRUN_STR);
 					break;
 				case LUA_ERRMEM:
-					logit("[%d] %s", 0, LUA_ERRMEM_STR);
+					log_err("[%d] %s", 0, LUA_ERRMEM_STR);
 					break;
 				default:
-					logit("[%d] %s", 0, ERRUNKNOWN_STR);
+					log_err("[%d] %s", 0, ERRUNKNOWN_STR);
 			}
 		}
 	}

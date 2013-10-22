@@ -7,6 +7,8 @@
 
 #include "main.h"
 
+#include "log.h"
+
 const char* CRLF = "\r\n";
 
 /* utility functions */
@@ -108,7 +110,7 @@ void send_header(request_t* req) {
 	/* generate minimum headers */
 	char* header = malloc(strlen(req->httpstatus) + strlen(req->contenttype) + 27);
 	if (!header) {
-		logit("out of memory!");
+		log_err("out of memory!");
 		return;
 	}
 
@@ -171,23 +173,6 @@ void timestamp(char* ts) {
 	}
 }
 
-/* log a string and vars with a timestamp */
-void logit(const char* fmt, ...) {
-	va_list args;
-	char ts[20] = { '\0' };
-	char *str = NULL;
-	/* make a copy and add the timestamp */
-	str = (char*) malloc(20 + strlen(fmt) + 2);
-	timestamp(ts);
-	sprintf(str, "%s %s\n", ts, fmt);
-	/* we just let stderr route it */
-	va_start(args, fmt);
-	vfprintf(stderr, str, args);
-	fflush(stderr);
-	va_end(args);
-	free(str);
-}
-
 /* worker thread */
 static void *worker_run(void *a) {
 	/* shared vars */
@@ -216,13 +201,11 @@ static void *worker_run(void *a) {
 
 	/* check allocs */
 	if (!req.header.data || !req.body.data) {
-		logit("out of memory!");
+		log_err("out of memory!");
 		return NULL;
 	}
 
-#ifdef CHATTER
-	logit("[%d] starting", params->wid);
-#endif
+	log_dbg("[%d] starting", params->wid);
 
 	/* init request */
 	FCGX_InitRequest(&req.fcgi, params->sock, 0);
@@ -253,9 +236,7 @@ static void *worker_run(void *a) {
 		if (rc < 0)
 			break;
 
-#ifdef CHATTER
-		logit("[%d] accepting connection", params->wid);
-#endif
+		log_dbg("[%d] accepting connection", params->wid);
 
 		/* init loop vars */
 		script = FCGX_GetParam("SCRIPT_FILENAME", req.fcgi.envp);
@@ -285,9 +266,7 @@ static void *worker_run(void *a) {
 		/* search for script in the state pool */
 		i = 0;
 		do {
-			#ifdef CHATTER
-			logit("\t[%d] searching for script '%s'", params->wid, script);
-			#endif
+			log_dbg("[%d] searching for script '%s'", params->wid, script);
 
 			/* search the pool */
 			found = pool_scan_idle(pool, script);
@@ -297,16 +276,13 @@ static void *worker_run(void *a) {
 				/* give someone else a chance to flag out */
 				usleep(1);
 			} else {
-				#ifdef CHATTER
-				logit("\t[%d] found and locked state [%d]", params->wid, found);
-				#endif
+				log_dbg("[%d] found and locked state [%d]", params->wid, found);
 			}
 		} while ((found < 0) && (++i <= req.conf->retries));
 
 		if (found >= 0) {
-			#ifdef CHATTER
-			logit("\t[%d] using state [%d]", params->wid, found);
-			#endif
+			log_dbg("[%d] using state [%d]", params->wid, found);
+
 			/* found a matching Lua VM state */
 			slot = pool_slot(pool, found);
 			L = slot->state;
@@ -315,7 +291,7 @@ static void *worker_run(void *a) {
 			/* make a new Lua VM state */
 			L = lua_open();
 			if (!L) {
-				logit("\t[%d] unable to init lua!", params->wid);
+				log_err("[%d] unable to init lua!", params->wid);
 				return NULL;
 			}
 			luaL_openlibs(L);
@@ -324,9 +300,7 @@ static void *worker_run(void *a) {
 			fbuf = script_load(script, &fs);
 
 			if (fbuf) {
-				#ifdef CHATTER
-				logit("\t[%d] loaded '%s'", params->wid, script, found);
-				#endif
+				log_dbg("[%d] loaded '%s'", params->wid, script, found);
 
 				/* TODO: run state startup hook */
 				/* load and run buffer */
@@ -342,26 +316,21 @@ static void *worker_run(void *a) {
 				/* grab a free spot, kicking the quietest one out if needed */
 				do {
 					found = pool_scan_free(pool);
-#ifdef CHATTER
-					if (found >= 0) logit("\t[%d] locked free state [%d]", params->wid, found);
-#endif
 					if (found < 0) {
 						/* the pool is full & everyone is busy! */
 						/* wait around for a bit so someone else can flag out */
 						usleep((int) ((rand() % 3) + 1));
+					} else {
+						log_dbg("[%d] locked free state [%d]", params->wid, found);
 					}
 				} while(found < 0);
 
 				/* load it up */
 				pool_load(pool, found, L, script);
 				slot = pool_slot(pool, found);
-#ifdef CHATTER
-				logit("\t[%d] loaded '%s' into state [%d]", params->wid, script, found);
-#endif
+				log_dbg("[%d] loaded '%s' into state [%d]", params->wid, script, found);
 			} else {
-#ifdef CHATTER
-				logit("\t[%d] '%s' errored out", params->wid, script);
-#endif
+				log_dbg("[%d] '%s' errored out", params->wid, script);
 				if (lua_isstring(L, -1)) {
 					/* capture the error message */
 					strncpy(errmsg, lua_tostring(L, -1), ERR_SIZE);
@@ -377,9 +346,9 @@ static void *worker_run(void *a) {
 
 		if (L) {
 			/* we have a valid VM state, time to roll! */
-#ifdef CHATTER
-			logit("\t[%d] running '%s', Lua stack size = %d", params->wid, script, lua_gettop(L));
-#endif
+			log_dbg("[%d] running '%s', Lua stack size = %d",
+				params->wid, script, lua_gettop(L));
+
 			lua_getglobal(L, req.conf->handler);
 			if (lua_isfunction(L, -1)) {
 				/* prepare request object */
@@ -441,7 +410,7 @@ static void *worker_run(void *a) {
 			break;
 		case LUA_ERRRUN:
 		case LUA_ERRSYNTAX:
-			logit("[%d] %s: %s", params->wid, errtype, errmsg);
+			log_err("[%d] %s: %s", params->wid, errtype, errmsg);
 			if (req.conf->showerrors) {
 				strcpy(req.httpstatus, "500 Internal Server Error");
 				strcpy(req.contenttype, "text/html");
@@ -452,7 +421,7 @@ static void *worker_run(void *a) {
 		case LUA_ERRFILE:
 		case LUA_ERRMEM:
 		default:
-			logit("[%d] %s", params->wid, errtype);
+			log_err("[%d] %s", params->wid, errtype);
 			if (req.conf->showerrors) {
 				strcpy(req.httpstatus, "500 Internal Server Error");
 				strcpy(req.contenttype, "text/html");
@@ -471,9 +440,7 @@ static void *worker_run(void *a) {
 			pool_unlock(pool);
 		}
 
-#ifdef CHATTER
-		logit("[%d] done with request", params->wid);
-#endif
+		log_dbg("[%d] done with request", params->wid);
 
 		/* release transient memory */
 		buffer_shrink(&req.header, (size_t)params->conf->headersize);
@@ -506,6 +473,8 @@ int main(int arc, char** argv) {
 	time_t lastsweep;
 	int interval;
 
+	log_open(basename(argv[0]), LOG_PID, LOG_DAEMON);
+
 	if (arc > 1 && argv[1]) {
 		conf = config_load(argv[1]);
 	} else {
@@ -520,7 +489,7 @@ int main(int arc, char** argv) {
 
 	sock = FCGX_OpenSocket(conf->listen, conf->backlog);
 	if (!sock) {
-		logit("[PARENT] unable to create accept socket!");
+		log_err("[PARENT] unable to create accept socket!");
 		return 1;
 	}
 
@@ -532,7 +501,7 @@ int main(int arc, char** argv) {
 
 	/* check allocs */
 	if (!worker || !params) {
-		logit("out of memory!");
+		log_err("out of memory!");
 		config_free(conf);
 		return 1;
 	}
@@ -571,9 +540,7 @@ int main(int arc, char** argv) {
 				if ((stat(slot->name, &fs) == STATUS_OK) &&
 						(fs.st_mtime > slot->load)) {
 					pool_flush(pool, i);
-#ifdef CHATTER
-					logit("[%d] has gone stale", i);
-#endif
+					log_dbg("[%d] has gone stale", i);
 				}
 			}
 		}

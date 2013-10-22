@@ -125,7 +125,6 @@ void luaL_pushcgicontent(lua_State* L, request_t* r);
 void luaL_pushcgienv(lua_State* L, request_t* r);
 
 char* script_load(const char* fn, struct stat* fs);
-void logit(const char* fmt, ...);
 config_t* config_load(const char* fn);
 
 void send_header(request_t* req);

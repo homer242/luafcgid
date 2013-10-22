@@ -1,5 +1,7 @@
 #include "main.h"
 
+#include "log.h"
+
 pool_t* pool_open(int count) {
 	pool_t* pool = NULL;
 	if (count) {
@@ -45,9 +47,8 @@ int pool_scan_idle(pool_t* pool, char* name) {
 		/* do the names match and is it a valid state? */
 		if (((!name && !slot->name) || ((name && slot->name)
 				&& (strcmp(name, slot->name) == 0))) && slot->state) {
-			#ifdef CHATTER
-			logit("\t\tfound script '%s' in state [%d]", name, i);
-			#endif
+			log_dbg("found script '%s' in state [%d]", name, i);
+
 			/* count the clones */
 			clones++;
 			/* is the slot available? */
@@ -126,9 +127,8 @@ void pool_load(pool_t* pool, int index, lua_State* L, char* name) {
  * flush the Lua state out of the pool at slot[index]
  */
 void pool_flush(pool_t* pool, int index) {
-#ifdef CHATTER
-	logit("flushing slot [%d]", index);
-#endif
+	log_dbg("flushing slot [%d]", index);
+
 	slot_t* slot = pool_slot(pool, index);
 	/* shut it down */
 	if(slot->state) {
