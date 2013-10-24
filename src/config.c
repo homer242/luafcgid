@@ -17,7 +17,7 @@ config_t* config_load(const char* fn) {
     cf->workers = 3;
     cf->states = 5;
     cf->clones = cf->workers;
-    cf->sweep = 1000;
+    cf->sweep = 999999;
     cf->watchdog = 60;
     cf->retries = 2;
     cf->showerrors = TRUE;

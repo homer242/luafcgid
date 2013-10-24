@@ -41,7 +41,7 @@ clones = <*integer*>
 	"states", This affects things such as number of database connections.
 
 sweep = <*integer*>
-:	Housekeeping sweep cycle in milliseconds.
+:	Housekeeping sweep cycle in microseconds (from 1 to 999999).
 
 retries = <*integer*>
 :	Number of search cycles before creating a new Lua VM state for a requested
